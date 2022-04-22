@@ -2,8 +2,6 @@ package utils
 
 import (
 	"bufio"
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -31,15 +29,14 @@ func HttpGetFile(url string) ([]byte, error) {
 // 下载http链接的分片文件到本地磁盘，如果是加密文件请传递加密密钥
 // @param url string 链接地址
 func DownloadeSliceFile(url string, filePath string, decryptKey string) (result string, err error) {
-	// dir, _ := os.Getwd()
-	// filePath := path.Join(GetDownloadTmpDir(), fileName)
 	LoggerDebug("DownloadeSliceFile: " + filePath)
 	err1 := os.MkdirAll(path.Dir(filePath), os.ModePerm)
 	if err1 != nil {
 		fmt.Println(err)
 	}
 
-	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
+	// file, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0666)
+	file, err := CreateTmpFile()
 	if err != nil {
 		LoggerError(err.Error())
 		return filePath, err
@@ -63,11 +60,8 @@ func DownloadeSliceFile(url string, filePath string, decryptKey string) (result 
 	write.Write(decryptData)
 	write.Flush()
 
-	return filePath, nil
-}
+	CopyFile(file.Name(), filePath)
+	os.Remove(file.Name())
 
-func GetMD5(str string) string {
-	md5Ctx := md5.New()
-	md5Ctx.Write([]byte(str))
-	return hex.EncodeToString(md5Ctx.Sum(nil))
+	return filePath, nil
 }
