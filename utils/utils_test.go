@@ -17,6 +17,12 @@ func TestHttpGetFile(t *testing.T) {
 	assetObj.Equal(strings.Contains(strData, "errorCode"), true)
 }
 
+func TestDownloadeSliceFile(t *testing.T) {
+	url := "https://v3.dious.cc/20220331/NGxXAbhN/2000kb/hls/AaxF3XHP.ts"
+	fileName := "/Users/zhangqinghong/study/go/hls-dl/data/1-1.ts"
+	DownloadeSliceFile(url, fileName, "")
+}
+
 func TestGetMD5(t *testing.T) {
 	assetObj := assert.New(t)
 	assetObj.Equal(GetMD5("123456"), "e10adc3949ba59abbe56e057f20f883e")

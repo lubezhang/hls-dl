@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"net/url"
@@ -71,6 +73,25 @@ func CreateTmpFile() (tmpFile *os.File, err error) {
 func CleanTmpFile() error {
 	tmpDir := path.Join(os.TempDir(), CONST_BASE_OS_TMP_DIR)
 	return os.RemoveAll(tmpDir)
+}
+
+func CopyFile(sourceFile string, distFile string) (err error) {
+	LoggerDebug("CopyFile: " + sourceFile + " -> " + distFile)
+	input, err := ioutil.ReadFile(sourceFile)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(distFile, input, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetMD5(str string) string {
+	md5Ctx := md5.New()
+	md5Ctx.Write([]byte(str))
+	return hex.EncodeToString(md5Ctx.Sum(nil))
 }
 
 // 清理分片文件中的无用数据，影响分片合并后的播放
