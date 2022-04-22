@@ -33,8 +33,8 @@ type DownloaderOption struct {
 // 下载器
 type Downloader struct {
 	m3u8Url    string            // m3u8文件地址
-	hlsBase    protocol.HlsBase  // 协议基础对象
-	selectVod  protocol.HlsVod   // 选择下载的视频
+	hlsBase    *protocol.HlsBase // 协议基础对象
+	selectVod  *protocol.HlsVod  // 选择下载的视频
 	wg         sync.WaitGroup    // 并发线程管理容器
 	opts       DownloaderOption  // 下载器参数
 	cache      DownloadCacheData // 下载数据管理器
@@ -49,6 +49,7 @@ func (dl *Downloader) SetOpts(opts1 DownloaderOption) {
 // 开始下载m3u8文件
 func (dl *Downloader) Start() {
 	// _, err := dl.selectMediaVod()
+	dl._init()
 	if reflect.ValueOf(dl.selectVod).IsValid() {
 		go dl.mergeVodFileToMp4()
 		dl.startDownload()
@@ -71,22 +72,6 @@ func (dl *Downloader) _init() {
 	dl.SetOpts(defaultOpts)
 
 	dl.selectMediaVod()
-}
-
-// 合并视频分片文件到一个视频文件中
-func (dl *Downloader) startMergeFile() {
-	// sliceTotal := len(dl.hlsSlave.Extinf)
-	sliceTotal := 50
-	ticker := time.NewTicker(1 * time.Second)
-	for {
-		if dl.sliceCount == sliceTotal {
-			dl.wg.Done()
-			break
-		}
-		dl.mergeVodFile()
-		<-ticker.C
-	}
-	ticker.Stop()
 }
 
 func (dl *Downloader) mergeVodFileToMp4() {
@@ -126,38 +111,6 @@ func (dl *Downloader) mergeVodFileToMp4() {
 	dl.mergeVodFileToMp4()
 }
 
-// Deprecated: sdfsd
-func (dl *Downloader) mergeVodFile() {
-	sliceTotal := len(dl.selectVod.ExtInfs)
-	// progress := dl.sliceCount / sliceTotal
-	utils.LoggerInfo("******* 视频下载进度：" + strconv.Itoa(dl.sliceCount) + " / " + strconv.Itoa(sliceTotal))
-	for {
-		utils.LoggerDebug("写入文件")
-		if dl.sliceCount == sliceTotal {
-			break
-		}
-		// 检查片文件是否存在
-		sliceFilePath := dl.getTmpFilePath(strconv.Itoa(dl.sliceCount))
-		_, err1 := os.Stat(sliceFilePath)
-		if err1 != nil {
-			break
-		}
-		file, err2 := os.OpenFile(sliceFilePath, os.O_RDONLY, os.ModePerm)
-		if err2 != nil {
-			break
-		}
-		defer file.Close()
-
-		buf, _ := ioutil.ReadAll(file)
-		buf = utils.CleanSliceUselessData(buf)
-		vodFile, _ := os.OpenFile(dl.getVodFilePath(), os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModePerm)
-		vodFile.Write(buf)
-		defer vodFile.Close()
-
-		dl.sliceCount = dl.sliceCount + 1
-	}
-}
-
 func (dl *Downloader) startDownload() {
 	dl.setDecryptKey()
 	dl.setDwnloadCache()
@@ -181,9 +134,6 @@ func (dl *Downloader) setDwnloadCache() {
 
 	var list []DownloadData
 	for idx, extinf := range hlsVod.ExtInfs {
-		// if idx > 50 {
-		// 	break
-		// }
 		var decryptKey = ""
 		if extinf.EncryptIndex >= 0 {
 			decryptKey = hlsVod.Extkeys[extinf.EncryptIndex].Key
@@ -225,7 +175,7 @@ func (dl *Downloader) selectMediaVod() (err error) {
 	hlsBase, _ := protocol.ParseString(&strDat1, baseUrl)
 
 	if hlsBase.IsMaster() {
-		// dl.hlsMaster = &hls
+		dl.hlsBase = &hlsBase
 		hlsMaster, _ := hlsBase.GetMaster()
 		if len(hlsMaster.StreamInfs) == 0 {
 			return errors.New("master中没有视频流")
@@ -234,10 +184,12 @@ func (dl *Downloader) selectMediaVod() (err error) {
 		strData2 := string(data2)
 		hlsBas2, _ := protocol.ParseString(&strData2, baseUrl)
 		if hlsBas2.IsVod() {
-			dl.selectVod, _ = hlsBase.GetVod()
+			selectVod, _ := hlsBase.GetVod()
+			dl.selectVod = &selectVod
 		}
 	} else if hlsBase.IsVod() {
-		dl.selectVod, _ = hlsBase.GetVod()
+		selectVod, _ := hlsBase.GetVod()
+		dl.selectVod = &selectVod
 	} else {
 		return errors.New("没有视频回放文件")
 	}
@@ -247,7 +199,7 @@ func (dl *Downloader) selectMediaVod() (err error) {
 
 // 通过链接获取加密密钥，并将密钥填充到加密数据结构中
 func (dl *Downloader) setDecryptKey() {
-	hls, _ := dl.hlsBase.GetVod()
+	hls := dl.selectVod
 	if len(hls.Extkeys) == 0 {
 		return
 	}
