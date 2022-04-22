@@ -2,12 +2,19 @@ package utils
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"path"
 	"strings"
 
 	"github.com/rs/zerolog"
+)
+
+const (
+	CONST_BASE_DATA_DIR   = "data"    // 下载数据目录
+	CONST_BASE_TMP_DIR    = "tmp"     // 临时数据目录
+	CONST_BASE_OS_TMP_DIR = "pulldlr" // 临时数据目录
 )
 
 func Logger() *zerolog.Logger {
@@ -49,6 +56,21 @@ func GetDownloadTmpDir() string {
 func GetDownloadDataDir() string {
 	dir, _ := os.Getwd()
 	return path.Join(dir, CONST_BASE_DATA_DIR)
+}
+
+func CreateTmpFile() (tmpFile *os.File, err error) {
+	tmpDir := path.Join(os.TempDir(), CONST_BASE_OS_TMP_DIR)
+	err1 := os.MkdirAll(tmpDir, os.ModePerm)
+	if err1 != nil {
+		return nil, err1
+	}
+	file, err := ioutil.TempFile(tmpDir, CONST_BASE_OS_TMP_DIR+"_")
+	return file, err
+}
+
+func CleanTmpFile() error {
+	tmpDir := path.Join(os.TempDir(), CONST_BASE_OS_TMP_DIR)
+	return os.RemoveAll(tmpDir)
 }
 
 // 清理分片文件中的无用数据，影响分片合并后的播放

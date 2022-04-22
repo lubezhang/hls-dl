@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -19,4 +20,19 @@ func TestHttpGetFile(t *testing.T) {
 func TestGetMD5(t *testing.T) {
 	assetObj := assert.New(t)
 	assetObj.Equal(GetMD5("123456"), "e10adc3949ba59abbe56e057f20f883e")
+}
+
+func TestCreateTmpFile(t *testing.T) {
+	assetObj := assert.New(t)
+	tmpFile, err := CreateTmpFile()
+	assetObj.Nil(err)
+	tmpFile.WriteString("123456")
+	defer tmpFile.Close()
+
+	content, _ := ioutil.ReadFile(tmpFile.Name())
+	assetObj.Equal(string(content), "123456")
+}
+
+func TestCleanTmpFile(t *testing.T) {
+	CleanTmpFile()
 }

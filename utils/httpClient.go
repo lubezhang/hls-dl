@@ -13,11 +13,6 @@ import (
 	"github.com/lubezhang/hls-parse/common"
 )
 
-const (
-	CONST_BASE_DATA_DIR = "data" // 下载数据目录
-	CONST_BASE_TMP_DIR  = "tmp"  // 临时数据目录
-)
-
 func HttpGetFile(url string) ([]byte, error) {
 	LoggerDebug("HttpGetFile: " + url)
 	resp, err := http.Get(url)
