@@ -59,14 +59,15 @@ func CleanSliceUselessData(sliceData []byte) (result []byte) {
 
 	bLen := len(sliceData)
 	for j := 0; j < bLen; j++ {
-		if j == 188 {
-			result = sliceData[j:]
+		if j > 188 { // 188个字节以前没有找到需要清理的数据，则停止清理任务
+			// result = sliceData[j:]
 			break
 		}
+		// 清除无用数据
 		if sliceData[j] == byte(syncTag1) && sliceData[j+1] == byte(syncTag2) {
 			// fmt.Printf("===== %d / %d ======\n", j, bLen)
-			// result = sliceData[j:]
-			// break
+			result = sliceData[j:]
+			break
 		}
 	}
 	return
