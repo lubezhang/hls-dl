@@ -59,7 +59,10 @@ func DownloadeSliceFile(url string, filePath string, decryptKey string) (result 
 	if decryptKey == "" {
 		decryptData = data
 	} else {
-		decryptData, _ = common.AesDecrypt(data, decryptKey)
+		decryptData, err = common.AesDecrypt(data, decryptKey)
+		if err != nil {
+			return filePath, err
+		}
 	}
 
 	write.Write(decryptData)

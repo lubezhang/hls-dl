@@ -8,7 +8,8 @@ import (
 
 func TestDownloader(t *testing.T) {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	dl, _ := New("https://cache28.cdanan.xyz/jianghu/vipyk/XNTg1NTg0MDYwOA==.m3u8")
+	dl, _ := New("https://qq.sd-play.com/20220405/4Si6DIev/hls/index.m3u8")
+	// dl, _ := New("https://cache28.cdanan.xyz/jianghu/vipyk/XNTg1NTg0MDYwOA==.m3u8")
 	dl.SetOpts(DownloaderOption{
 		FileName: "11.mp4",
 	})
@@ -17,5 +18,9 @@ func TestDownloader(t *testing.T) {
 
 func TestShowProtocolInfo(t *testing.T) {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	ShowProtocolInfo("https://cache28.cdanan.xyz/jianghu/vipyk/XNTg1NTg0MDYwOA==.m3u8")
+	ShowProtocolInfo("https://qq.sd-play.com/20220405/4Si6DIev/hls/index.m3u8")
+}
+
+func TestStartMergeFile(t *testing.T) {
+	StartMergeFile()
 }

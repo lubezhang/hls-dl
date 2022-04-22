@@ -50,3 +50,24 @@ func GetDownloadDataDir() string {
 	dir, _ := os.Getwd()
 	return path.Join(dir, CONST_BASE_DATA_DIR)
 }
+
+// 清理分片文件中的无用数据，影响分片合并后的播放
+func CleanSliceUselessData(sliceData []byte) (result []byte) {
+	// syncByte := uint8(71) // 0x47 的十进制
+	syncTag1 := 0x47
+	syncTag2 := 0x40
+
+	bLen := len(sliceData)
+	for j := 0; j < bLen; j++ {
+		if j == 188 {
+			result = sliceData[j:]
+			break
+		}
+		if sliceData[j] == byte(syncTag1) && sliceData[j+1] == byte(syncTag2) {
+			// fmt.Printf("===== %d / %d ======\n", j, bLen)
+			// result = sliceData[j:]
+			// break
+		}
+	}
+	return
+}

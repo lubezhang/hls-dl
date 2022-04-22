@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/lubezhang/hls-parse/protocol"
-	"github.com/lubezhang/hls-parse/types"
 	"github.com/lubezhang/pulldlr/utils"
 )
 
@@ -14,45 +13,52 @@ func ShowProtocolInfo(url string) {
 
 	data1, _ := utils.HttpGetFile(url)
 	strDat1 := string(data1)
-	hls, err := protocol.Parse(&strDat1, baseUrl)
+	hlsBase, err := protocol.ParseString(&strDat1, baseUrl)
 
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	if hls.IsMaster() {
-		fmt.Println("******* 主文件 *******")
-		fmt.Println("Stream 数量:", len(hls.ExtStreamInf))
+	if hlsBase.IsMaster() {
+		hlsMaster, _ := hlsBase.GetMaster()
+		showProtocolMaster(hlsMaster)
 
-		if len(hls.ExtStreamInf) == 0 {
+		if len(hlsMaster.StreamInfs) == 0 {
 			return
 		}
 
-		for idx, extStreamInf := range hls.ExtStreamInf {
-			fmt.Printf("Stream%d 分辨率:%s \n", idx+1, extStreamInf.Resolution)
-		}
-		fmt.Println("******* 主文件 *******")
-		fmt.Println("")
-		data2, _ := utils.HttpGetFile(hls.ExtStreamInf[0].Url)
+		data2, _ := utils.HttpGetFile(hlsMaster.StreamInfs[0].Url)
 		strData2 := string(data2)
-		hls2, _ := protocol.Parse(&strData2, baseUrl)
-		if hls2.IsVod() {
-			showProtocolVod(hls2)
+		hlsBase2, _ := protocol.ParseString(&strData2, baseUrl)
+		if hlsBase2.IsVod() {
+			hlsVod, _ := hlsBase2.GetVod()
+			showProtocolVod(hlsVod)
 		}
-
-	} else if hls.IsVod() {
-		showProtocolVod(hls)
+	} else if hlsBase.IsVod() {
+		hlsVod, _ := hlsBase.GetVod()
+		showProtocolVod(hlsVod)
 	} else {
 		fmt.Println("没有协议")
 	}
 }
 
-func showProtocolVod(hls types.HLS) {
+func showProtocolMaster(hls protocol.HlsMaster) {
+	fmt.Println("")
+	fmt.Println("******* master文件 *******")
+	fmt.Println("Stream 数量:", len(hls.StreamInfs))
+	for idx, stream := range hls.StreamInfs {
+		fmt.Printf("Stream%d 分辨率:%s \n", idx+1, stream.Resolution)
+	}
+	fmt.Println("******* master文件 *******")
+	fmt.Println("")
+}
+
+func showProtocolVod(hls protocol.HlsVod) {
 	fmt.Println("")
 	fmt.Println("******* VOD文件 *******")
-	fmt.Println("分片数量：", len(hls.Extinf))
-	fmt.Println("是否加密：", len(hls.Extkey) > 0, len(hls.Extkey))
+	fmt.Println("分片数量：", len(hls.ExtInfs))
+	fmt.Println("是否加密：", len(hls.Extkeys) > 0, len(hls.Extkeys))
 	fmt.Println("******* VOD文件 *******")
 	fmt.Println("")
 }
