@@ -54,6 +54,7 @@ func (dl *Downloader) Start() {
 		go dl.mergeVodFileToMp4()
 		dl.startDownload()
 		dl.wg.Wait()
+		dl.cleanTmpFile() // 下载完成，清理临时数据
 	} else {
 		utils.LoggerInfo("没有选择下载的视频")
 		return
@@ -222,5 +223,15 @@ func (dl *Downloader) getTmpFilePath(fileName string) string {
 }
 func (dl *Downloader) getVodFilePath() string {
 	return path.Join(utils.GetDownloadDataDir(), dl.opts.FileName)
+}
 
+// 清理临时文件
+func (dl *Downloader) cleanTmpFile() error {
+	utils.LoggerInfo("清理临时文件")
+	tmpDir := dl.getTmpFilePath(dl.opts.FileName)
+	err := os.RemoveAll(tmpDir)
+	if err != nil {
+		return err
+	}
+	return nil
 }
