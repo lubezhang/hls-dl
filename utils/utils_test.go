@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -18,9 +19,13 @@ func TestHttpGetFile(t *testing.T) {
 }
 
 func TestDownloadeSliceFile(t *testing.T) {
-	url := "https://v3.dious.cc/20220331/NGxXAbhN/2000kb/hls/AaxF3XHP.ts"
+	url := "https://v3.dious.cc/20220331/NGxXAbhN/2000kb/hls/AaxF3XHP.ts1"
 	fileName := "/Users/zhangqinghong/study/go/hls-dl/data/1-1.ts"
-	DownloadeSliceFile(url, fileName, "")
+	_, err := DownloadeSliceFile(url, fileName, "")
+	if err != nil {
+		fmt.Println("=================", err)
+		// t.Error(err)
+	}
 }
 
 func TestGetMD5(t *testing.T) {

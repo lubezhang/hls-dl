@@ -5,6 +5,6 @@ import (
 )
 
 func main() {
-	pulldlr.Command()
-
+	// pulldlr.Command()
+	pulldlr.CommandUI()
 }

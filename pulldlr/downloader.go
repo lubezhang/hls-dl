@@ -60,12 +60,29 @@ func (dl *Downloader) Start() {
 
 		// 正常下载完成，处理异常集合的分片
 
-		// dl.cleanTmpFile() // 下载完成，清理临时数据
+		dl.cleanTmpFile() // 下载完成，清理临时数据
 	} else {
 		utils.LoggerInfo("没有选择下载的视频")
 		return
 	}
 	// utils.LoggerInfo("<<<<<<< 下载视频完成:" + dl.opts.FileName)
+}
+
+func (dl *Downloader) CheckMaster() (result protocol.HlsMaster, err error) {
+	// return path.Join(utils.GetDownloadTmpDir(), utils.GetMD5(dl.opts.FileName), dl.opts.FileName)
+	baseUrl := utils.GetBaseUrl(dl.m3u8Url)
+
+	data1, _ := utils.HttpGetFile(dl.m3u8Url)
+	strDat1 := string(data1)
+	hlsBase, _ := protocol.ParseString(&strDat1, baseUrl)
+	if hlsBase.IsMaster() {
+		result, _ = hlsBase.GetMaster()
+		err = nil
+	} else {
+		err = errors.New("不是主文件")
+	}
+
+	return
 }
 
 func (dl *Downloader) _init() {
@@ -90,7 +107,7 @@ func (dl *Downloader) mergeVodFileToMp4() {
 	}
 
 	for {
-		curProgress := sliceTotal - dl.cache.ReadyLen() - dl.cache.ErrorLen()
+		curProgress := sliceTotal - dl.cache.ReadyLen()
 		utils.DrawProgressBar(dl.opts.FileName, float32(curProgress)/float32(sliceTotal), 80)
 		// 检查片文件是否存在
 		sliceFilePath := dl.getTmpFilePath(strconv.Itoa(dl.sliceCount))
@@ -198,7 +215,7 @@ func (dl *Downloader) downloadVodFile() {
 	}
 }
 
-// 解析vod类型的协议
+// 获取Vod协议，如果是主文件取视频流的第一个
 func (dl *Downloader) selectMediaVod() (err error) {
 	utils.LoggerInfo("获取Vod协议文件对象")
 	baseUrl := utils.GetBaseUrl(dl.m3u8Url)
