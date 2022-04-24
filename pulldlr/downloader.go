@@ -27,7 +27,8 @@ func New(url string) (result *Downloader, err error) {
 
 // 下载器参数
 type DownloaderOption struct {
-	FileName string // 文件名
+	FileName  string // 文件名
+	MaxThread int    // 最大下载线程数
 }
 
 // 下载器
@@ -49,7 +50,7 @@ func (dl *Downloader) SetOpts(opts1 DownloaderOption) {
 // 开始下载m3u8文件
 func (dl *Downloader) Start() {
 	dl._init()
-	if reflect.ValueOf(dl.selectVod).IsValid() {
+	if reflect.ValueOf(dl.selectVod).IsValid() && len(dl.selectVod.ExtInfs) > 0 {
 		go dl.mergeVodFileToMp4()
 		dl.startDownload()
 		dl.wg.Wait()
@@ -65,7 +66,8 @@ func (dl *Downloader) _init() {
 	dl.sliceCount = 0
 	// 设置默认参数
 	defaultOpts := DownloaderOption{
-		FileName: time.Now().Format("2006-01-02$15:04:05") + ".mp4", // 生成临时文件名
+		FileName:  time.Now().Format("2006-01-02$15:04:05") + ".mp4", // 生成临时文件名
+		MaxThread: 10,
 	}
 	mergo.MergeWithOverwrite(&defaultOpts, dl.opts) // 合并自定义和默认参数
 	utils.LoggerInfo(">>>>>>> 下载视频:" + defaultOpts.FileName)
@@ -82,9 +84,6 @@ func (dl *Downloader) mergeVodFileToMp4() {
 	}
 
 	for {
-		// progress1 := float32(dl.sliceCount) / float32(sliceTotal)
-		// fmt.Println("Progress:", (int)(progress1*100), "%")
-		// utils.LoggerInfo("******* 视频下载进度：" + strconv.Itoa((int)(float32(dl.sliceCount)/float32(sliceTotal)*100)) + "% ")
 		utils.DrawProgressBar(dl.opts.FileName, float32(dl.sliceCount)/float32(sliceTotal), 80)
 		// 检查片文件是否存在
 		sliceFilePath := dl.getTmpFilePath(strconv.Itoa(dl.sliceCount))
@@ -122,7 +121,7 @@ func (dl *Downloader) startDownload() {
 
 // 开始下载Vod文件
 func (dl *Downloader) startDownloadVod() {
-	for i := 0; i < 10; i++ { // 开启10个协程下载
+	for i := 0; i < dl.opts.MaxThread; i++ {
 		go dl.downloadVodFile()
 		// dl.downloadVodFile()
 	}
@@ -187,7 +186,7 @@ func (dl *Downloader) selectMediaVod() (err error) {
 		strData2 := string(data2)
 		hlsBas2, _ := protocol.ParseString(&strData2, baseUrl)
 		if hlsBas2.IsVod() {
-			selectVod, _ := hlsBase.GetVod()
+			selectVod, _ := hlsBas2.GetVod()
 			dl.selectVod = &selectVod
 		}
 	} else if hlsBase.IsVod() {
