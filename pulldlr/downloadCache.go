@@ -7,6 +7,7 @@ import (
 
 type DownloadCacheData struct {
 	lockDownload sync.Mutex
+	lockComplete sync.Mutex
 
 	downloadReady []DownloadData          // 待下载资源队列
 	downloading   map[string]DownloadData // 正在下载的资源队列
@@ -39,7 +40,7 @@ func (cache *DownloadCacheData) Pop() (result DownloadData, err error) {
 	if cache.downloading == nil {
 		cache.downloading = make(map[string]DownloadData)
 	}
-	// 处理并发删除切片
+	// 处理并发
 	cache.lockDownload.Lock()
 
 	dr := cache.downloadReady[0]
@@ -55,6 +56,7 @@ func (cache *DownloadCacheData) Pop() (result DownloadData, err error) {
 // 完成下载，将下载对象从正在下载队列中移除
 // 如果有错误，暂时放到异常队列中，等待重试
 func (cache *DownloadCacheData) Complete(downloadData DownloadData, err error) {
+	cache.lockComplete.Lock()
 	if cache.downloadError == nil {
 		cache.downloadError = make(map[string]DownloadData)
 	}
@@ -63,4 +65,5 @@ func (cache *DownloadCacheData) Complete(downloadData DownloadData, err error) {
 	} else {
 		cache.downloadError[downloadData.Key] = downloadData
 	}
+	cache.lockComplete.Unlock()
 }

@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -60,6 +61,7 @@ func GetDownloadDataDir() string {
 	return path.Join(dir, CONST_BASE_DATA_DIR)
 }
 
+// 创建系统级临时文件，返回一个文件句柄
 func CreateTmpFile() (tmpFile *os.File, err error) {
 	tmpDir := path.Join(os.TempDir(), CONST_BASE_OS_TMP_DIR)
 	err1 := os.MkdirAll(tmpDir, os.ModePerm)
@@ -70,6 +72,7 @@ func CreateTmpFile() (tmpFile *os.File, err error) {
 	return file, err
 }
 
+// 清理系统级临时文件，返回一个文件句柄
 func CleanTmpFile() error {
 	tmpDir := path.Join(os.TempDir(), CONST_BASE_OS_TMP_DIR)
 	return os.RemoveAll(tmpDir)
@@ -117,8 +120,15 @@ func CleanSliceUselessData(sliceData []byte) (result []byte) {
 }
 
 func DrawProgressBar(prefix string, proportion float32, width int, suffix ...string) {
-	pos := int(proportion * float32(width))
-	s := fmt.Sprintf("【%s】 [%s%*s] %6.2f%% \t%s",
-		prefix, strings.Repeat("■", pos), width-pos, "", proportion*100, strings.Join(suffix, ""))
-	fmt.Print("\r" + s)
+	// Debug 不显示进度条
+	if zerolog.GlobalLevel() == zerolog.DebugLevel {
+		LoggerInfo("******* 视频下载进度：" + strconv.Itoa(int(proportion*100)) + "% ")
+		return
+	} else {
+		pos := int(proportion * float32(width))
+		s := fmt.Sprintf("【%s】 [%s%*s] %6.2f%% \t%s",
+			prefix, strings.Repeat("■", pos), width-pos, "", proportion*100, strings.Join(suffix, ""))
+		fmt.Print("\r" + s)
+	}
+
 }

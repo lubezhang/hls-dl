@@ -16,7 +16,10 @@ import (
 	"github.com/lubezhang/pulldlr/utils"
 )
 
-const CONST_BASE_SLICE_FILE_EXT = ".ts" // 分片文件扩展名
+const (
+	CONST_BASE_SLICE_FILE_EXT  = ".ts" // 分片文件扩展名
+	CONST_BASE_RETRY_MAX_COUNT = 3     // 下载分片文件的最大重试次数
+)
 
 func New(url string) (result *Downloader, err error) {
 	result = &Downloader{
@@ -54,12 +57,15 @@ func (dl *Downloader) Start() {
 		go dl.mergeVodFileToMp4()
 		dl.startDownload()
 		dl.wg.Wait()
-		dl.cleanTmpFile() // 下载完成，清理临时数据
+
+		// 正常下载完成，处理异常集合的分片
+
+		// dl.cleanTmpFile() // 下载完成，清理临时数据
 	} else {
 		utils.LoggerInfo("没有选择下载的视频")
 		return
 	}
-	utils.LoggerInfo("<<<<<<< 下载视频完成:" + dl.opts.FileName)
+	// utils.LoggerInfo("<<<<<<< 下载视频完成:" + dl.opts.FileName)
 }
 
 func (dl *Downloader) _init() {
@@ -70,7 +76,7 @@ func (dl *Downloader) _init() {
 		MaxThread: 10,
 	}
 	mergo.MergeWithOverwrite(&defaultOpts, dl.opts) // 合并自定义和默认参数
-	utils.LoggerInfo(">>>>>>> 下载视频:" + defaultOpts.FileName)
+	// utils.LoggerInfo(">>>>>>> 下载视频:" + defaultOpts.FileName)
 	dl.SetOpts(defaultOpts)
 
 	dl.selectMediaVod()
@@ -84,7 +90,8 @@ func (dl *Downloader) mergeVodFileToMp4() {
 	}
 
 	for {
-		utils.DrawProgressBar(dl.opts.FileName, float32(dl.sliceCount)/float32(sliceTotal), 80)
+		curProgress := sliceTotal - dl.cache.ReadyLen() - dl.cache.ErrorLen()
+		utils.DrawProgressBar(dl.opts.FileName, float32(curProgress)/float32(sliceTotal), 80)
 		// 检查片文件是否存在
 		sliceFilePath := dl.getTmpFilePath(strconv.Itoa(dl.sliceCount))
 		_, err1 := os.Stat(sliceFilePath)
@@ -116,14 +123,13 @@ func (dl *Downloader) mergeVodFileToMp4() {
 func (dl *Downloader) startDownload() {
 	dl.setDecryptKey()
 	dl.setDwnloadCache()
-	dl.startDownloadVod()
+	dl.startVodDownloadThead()
 }
 
-// 开始下载Vod文件
-func (dl *Downloader) startDownloadVod() {
+// 启动Vod文件下载线程，使用多线程并发下载视频分片
+func (dl *Downloader) startVodDownloadThead() {
 	for i := 0; i < dl.opts.MaxThread; i++ {
 		go dl.downloadVodFile()
-		// dl.downloadVodFile()
 	}
 }
 
@@ -140,6 +146,7 @@ func (dl *Downloader) setDwnloadCache() {
 		if extinf.EncryptIndex >= 0 {
 			decryptKey = hlsVod.Extkeys[extinf.EncryptIndex].Key
 		}
+
 		list = append(list, DownloadData{
 			Index:        idx,
 			Key:          utils.GetMD5(extinf.Url),
@@ -160,9 +167,33 @@ func (dl *Downloader) downloadVodFile() {
 		if err != nil {
 			return
 		}
-		utils.DownloadeSliceFile(data.Url, data.DownloadPath, data.EncryptKey)
+		_, err1 := utils.DownloadeSliceFile(data.Url, data.DownloadPath, data.EncryptKey)
+		// 如果下载失败，重试5次
+		if err1 != nil {
+			utils.LoggerDebug("下载失败重试:" + data.Url)
+			for i := 1; i <= CONST_BASE_RETRY_MAX_COUNT; i++ {
+				_, err2 := utils.DownloadeSliceFile(data.Url, data.DownloadPath, data.EncryptKey)
+				if i >= CONST_BASE_RETRY_MAX_COUNT { // 重试后，还是错误，放入到异常集合中
+					dl.cache.Complete(data, err2)
+
+					// 视频分片下载失败，写入一个空文件，保证文件合并线程正常执行
+					blankFile, _ := os.OpenFile(data.DownloadPath, os.O_CREATE|os.O_WRONLY, os.ModePerm)
+					defer blankFile.Close()
+					blankFile.Write([]byte(""))
+
+					break
+				}
+
+				if err2 == nil {
+					dl.cache.Complete(data, nil)
+					break
+				}
+			}
+		} else {
+			utils.LoggerDebug("分片下载完成:" + data.DownloadPath)
+			dl.cache.Complete(data, nil)
+		}
 		time.Sleep(20 * time.Millisecond)
-		utils.LoggerDebug("分片下载完成:" + data.DownloadPath)
 		dl.wg.Done()
 	}
 }
