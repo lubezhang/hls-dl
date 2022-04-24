@@ -21,7 +21,3 @@ func TestShowProtocolInfo(t *testing.T) {
 	// ShowProtocolInfo("https://qq.sd-play.com/20220405/4Si6DIev/hls/index.m3u8")
 	ShowProtocolInfo("https://vod.bunediy.com/20200411/BrguJtZ4/index.m3u8")
 }
-
-func TestStartMergeFile(t *testing.T) {
-	StartMergeFile()
-}
