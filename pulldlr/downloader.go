@@ -48,7 +48,6 @@ func (dl *Downloader) SetOpts(opts1 DownloaderOption) {
 
 // 开始下载m3u8文件
 func (dl *Downloader) Start() {
-	// _, err := dl.selectMediaVod()
 	dl._init()
 	if reflect.ValueOf(dl.selectVod).IsValid() {
 		go dl.mergeVodFileToMp4()
@@ -83,7 +82,10 @@ func (dl *Downloader) mergeVodFileToMp4() {
 	}
 
 	for {
-		utils.LoggerInfo("******* 视频下载进度：" + strconv.Itoa(dl.sliceCount) + " / " + strconv.Itoa(sliceTotal))
+		// progress1 := float32(dl.sliceCount) / float32(sliceTotal)
+		// fmt.Println("Progress:", (int)(progress1*100), "%")
+		// utils.LoggerInfo("******* 视频下载进度：" + strconv.Itoa((int)(float32(dl.sliceCount)/float32(sliceTotal)*100)) + "% ")
+		utils.DrawProgressBar(dl.opts.FileName, float32(dl.sliceCount)/float32(sliceTotal), 80)
 		// 检查片文件是否存在
 		sliceFilePath := dl.getTmpFilePath(strconv.Itoa(dl.sliceCount))
 		_, err1 := os.Stat(sliceFilePath)
@@ -227,10 +229,11 @@ func (dl *Downloader) getVodFilePath() string {
 
 // 清理临时文件
 func (dl *Downloader) cleanTmpFile() error {
-	utils.LoggerInfo("清理临时文件")
-	tmpDir := dl.getTmpFilePath(dl.opts.FileName)
+	tmpDir := path.Join(utils.GetDownloadTmpDir(), utils.GetMD5(dl.opts.FileName))
+	utils.LoggerInfo("清理临时文件:" + tmpDir)
 	err := os.RemoveAll(tmpDir)
 	if err != nil {
+		utils.LoggerError("清理临时文件失败:" + err.Error())
 		return err
 	}
 	return nil
